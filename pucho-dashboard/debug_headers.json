@@ -1,0 +1,32 @@
+{
+  "repairs_keys": [
+    "id",
+    "type",
+    "month",
+    "value",
+    "year"
+  ],
+  "rm_keys": [
+    "id",
+    "items",
+    "mt",
+    "keys1",
+    "value",
+    "year"
+  ],
+  "repairs_first": {
+    "id": "1",
+    "type": "store_repair",
+    "month": "apr",
+    "value": "21",
+    "year": "2015-16"
+  },
+  "rm_first": {
+    "id": "1",
+    "items": "LIME",
+    "mt": "1028",
+    "keys1": "4.14",
+    "value": "4255920",
+    "year": "2017-01"
+  }
+}
