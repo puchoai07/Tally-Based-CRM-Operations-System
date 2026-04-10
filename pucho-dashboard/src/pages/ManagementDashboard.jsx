@@ -61,7 +61,8 @@ const ManagementDashboard = () => {
       receivables: '₹0.00',
       dispatch: '94.2%',
       collections: '₹0.00',
-      compliance: '98%'
+      compliance: '98%',
+      productivity: { score: 65, rank: 'Top 5%', onTime: '88%' }
     });
 
     const syncData = async () => {
@@ -73,7 +74,8 @@ const ManagementDashboard = () => {
                 receivables: result.stats?.totalOutstanding || '₹0.00',
                 dispatch: '98.5%',
                 collections: result.stats?.totalRevenue || '₹0.00',
-                compliance: '100%'
+                compliance: '100%',
+                productivity: result.productivity || { score: 65, rank: 'Top 5%', onTime: '88%' }
             });
         }
         setTimeout(() => setIsSyncing(false), 2000);
@@ -211,9 +213,9 @@ const ManagementDashboard = () => {
                </div>
                <div className="space-y-6">
                   {[
-                    { label: 'Dispatch Center', val: '12 Orders Ready', color: 'bg-emerald-500' },
-                    { label: 'Payment Follow-ups', val: '08 Scheduled', color: 'bg-indigo-500' },
-                    { label: 'Compliance Audit', val: 'Active', color: 'bg-amber-400' }
+                    { label: 'Dispatch Center', val: '12 Orders Ready', color: 'bg-emerald-500', percent: 85 },
+                    { label: 'Payment Follow-ups', val: '08 Scheduled', color: 'bg-indigo-500', percent: 70 },
+                    { label: 'Productivity Score', val: `${dashboardStats.productivity.score}%`, color: 'bg-amber-400', percent: dashboardStats.productivity.score }
                   ].map((flow, i) => (
                     <div key={i} className="space-y-2">
                        <div className="flex justify-between text-xs font-bold">
@@ -221,7 +223,7 @@ const ManagementDashboard = () => {
                           <span className="text-slate-800">{flow.val}</span>
                        </div>
                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: '70%' }} transition={{ delay: 0.5+i*0.1 }} className={`h-full ${flow.color}`} />
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${flow.percent}%` }} transition={{ delay: 0.5+i*0.1 }} className={`h-full ${flow.color}`} />
                        </div>
                     </div>
                   ))}

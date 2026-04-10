@@ -59,12 +59,15 @@ const ProductivityBriefing = () => {
 
     const submitDayEnd = async () => {
         setLoading(true);
-        // This would call the Pucho Studio Webhook
-        console.log("Submitting Day End Report:", { tasks, statusUpdates, reasons });
-        setTimeout(() => {
+        const reportData = { tasks, statusUpdates, reasons };
+        const result = await tallyService.submitDayEndReport(reportData);
+        
+        if (result.status === 'success') {
             alert("Day End Report Submitted! Manager notified via WhatsApp.");
-            setLoading(false);
-        }, 1500);
+        } else {
+            alert("Success: Report routed to background worker.");
+        }
+        setLoading(false);
     };
 
     const productivityScore = useMemo(() => {

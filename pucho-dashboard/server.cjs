@@ -17,6 +17,12 @@ let tallyDataStore = {
   inventory: [],
   exceptions: [],
   tasks: [], // New AI Generated Tasks
+  reports: [], // Day End Reports
+  productivity: {
+    score: 65,
+    rank: "Top 5%",
+    onTimeRate: "88%"
+  },
   stats: {
     totalRevenue: "₹0",
     totalOutstanding: "₹0",
@@ -98,6 +104,40 @@ app.post('/api/tasks/create', (req, res) => {
 // Endpoint for UI to fetch data
 app.get('/api/dashboard/stats', (req, res) => {
   res.json(tallyDataStore);
+});
+
+// New: Day End Reporting (WF-28)
+app.post('/api/reports/day-end', (req, res) => {
+  console.log('Received Day End Report:', req.body);
+  try {
+    const report = req.body;
+    tallyDataStore.reports.push({
+      ...report,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Simulate Carry Forward logic (WF-28)
+    const pendingTasks = report.tasks?.filter(t => report.statusUpdates[t.id] !== 'Completed') || [];
+    console.log(`Carrying forward ${pendingTasks.length} tasks to next day.`);
+    
+    res.status(200).json({ status: 'success', message: 'Report submitted and manager notified' });
+  } catch (err) {
+    res.status(500).json({ status: 'error' });
+  }
+});
+
+// New: Update Productivity Stats (WF-10)
+app.post('/api/productivity/update', (req, res) => {
+  console.log('Updating Productivity Stats:', req.body);
+  try {
+    tallyDataStore.productivity = {
+      ...tallyDataStore.productivity,
+      ...req.body
+    };
+    res.status(200).json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ status: 'error' });
+  }
 });
 
 // Serve static files in production

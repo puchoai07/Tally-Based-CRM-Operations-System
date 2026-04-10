@@ -79,5 +79,25 @@ export const tallyService = {
     } catch (e) {
        return [];
     }
+  },
+
+  submitDayEndReport: async (reportData) => {
+    try {
+      const response = await axios.post(`${API_BASE}/reports/day-end`, reportData);
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      return { status: 'error' };
+    }
+  },
+
+  updateProductivity: async (stats) => {
+    try {
+      const response = await axios.post(`${API_BASE}/productivity/update`, stats);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating productivity:', error);
+      return { status: 'error' };
+    }
   }
 };
