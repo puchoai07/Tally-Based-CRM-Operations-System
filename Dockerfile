@@ -2,36 +2,35 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files from pucho-dashboard
-COPY pucho-dashboard/package.json pucho-dashboard/package-lock.json ./pucho-dashboard/
-
-# Install dependencies for pucho-dashboard
+# Copy dependency files first for better caching
+COPY pucho-dashboard/package*.json ./pucho-dashboard/
 RUN cd pucho-dashboard && npm install
 
-# Copy all files for pucho-dashboard
+# Copy source and build
 COPY pucho-dashboard/ ./pucho-dashboard/
-
-# Build the frontend
 RUN cd pucho-dashboard && npm run build
 
 # Stage 2: Production Server
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Set environment
+# Set production environment
 ENV NODE_ENV=production
 ENV PORT=5001
 
-# Copy built assets and server file
+# Copy package files for the server
+COPY --from=builder /app/pucho-dashboard/package*.json ./
+
+# Install only production dependencies
+RUN npm install --omit=dev
+
+# Copy built assets and server logic
 COPY --from=builder /app/pucho-dashboard/dist ./dist
 COPY --from=builder /app/pucho-dashboard/server.cjs ./server.cjs
-COPY --from=builder /app/pucho-dashboard/package.json ./package.json
-
-# Install production dependencies only
-RUN npm install --omit=dev
 
 # Expose the application port
 EXPOSE 5001
 
-# Start the bridge server which also serves the frontend
+# Start the bridge server
+# We use node server.cjs to serve the frontend and handle API webhooks
 CMD ["node", "server.cjs"]
