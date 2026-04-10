@@ -143,8 +143,8 @@ app.post('/api/productivity/update', (req, res) => {
 // Serve static files in production
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Route all other requests to index.html for React Router (Express 5 compatible)
-app.get('(.*)', (req, res) => {
+// Route all other requests to index.html for React Router (Express 5 Named Wildcard Fix)
+app.get('/:any*', (req, res) => {
   try {
     if (!req.url.startsWith('/api')) {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
