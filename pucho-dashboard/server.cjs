@@ -34,7 +34,7 @@ let tallyDataStore = {
 // Webhook endpoint for Pucho Studio
 app.post('/api/tally/sync', (req, res) => {
   console.log('Received Sync Data from Pucho Studio (Background processing started)...');
-  
+
   // Respond immediately to prevent tunnel timeout
   res.status(200).json({ status: 'processing', message: 'Data received and routing in background' });
 
@@ -59,7 +59,7 @@ app.post('/api/tally/sync', (req, res) => {
       });
 
       if (allRecords.length === 0 && Array.isArray(rawContent)) {
-          allRecords = rawContent;
+        allRecords = rawContent;
       }
 
       // Process and Route data based on record_type
@@ -92,8 +92,8 @@ app.post('/api/tasks/create', (req, res) => {
   try {
     const newTasks = req.body || [];
     if (Array.isArray(newTasks)) {
-       tallyDataStore.tasks = [...newTasks, ...tallyDataStore.tasks].slice(0, 100); 
-       console.log(`Created ${newTasks.length} new AI tasks.`);
+      tallyDataStore.tasks = [...newTasks, ...tallyDataStore.tasks].slice(0, 100);
+      console.log(`Created ${newTasks.length} new AI tasks.`);
     }
     res.status(200).json({ status: 'success' });
   } catch (err) {
@@ -115,11 +115,11 @@ app.post('/api/reports/day-end', (req, res) => {
       ...report,
       timestamp: new Date().toISOString()
     });
-    
+
     // Simulate Carry Forward logic (WF-28)
     const pendingTasks = report.tasks?.filter(t => report.statusUpdates[t.id] !== 'Completed') || [];
     console.log(`Carrying forward ${pendingTasks.length} tasks to next day.`);
-    
+
     res.status(200).json({ status: 'success', message: 'Report submitted and manager notified' });
   } catch (err) {
     res.status(500).json({ status: 'error' });
@@ -144,16 +144,16 @@ app.post('/api/productivity/update', (req, res) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Route all other requests to index.html for React Router (Express 5 Named Wildcard Fix)
-app.get('/:any*', (req, res) => {
+app.use((req, res) => {
   try {
-    if (!req.url.startsWith('/api')) {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    } else {
-      res.status(404).json({ error: 'API endpoint not found' });
+    if (req.url.startsWith('/api')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
     }
+
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   } catch (err) {
-    console.error('Routing Error:', err);
-    res.status(500).send('Internal Server Error');
+    console.error('SERVER ERROR:', err);
+    res.status(500).send('Something went wrong!');
   }
 });
 
