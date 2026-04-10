@@ -143,10 +143,17 @@ app.post('/api/productivity/update', (req, res) => {
 // Serve static files in production
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Route all other requests to index.html for React Router
-app.get('*', (req, res) => {
-  if (!req.url.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// Route all other requests to index.html for React Router (Express 5 compatible)
+app.get('(.*)', (req, res) => {
+  try {
+    if (!req.url.startsWith('/api')) {
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    } else {
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
+  } catch (err) {
+    console.error('Routing Error:', err);
+    res.status(500).send('Internal Server Error');
   }
 });
 

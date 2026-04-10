@@ -17,6 +17,7 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 ENV PORT=5001
+EXPOSE 5001
 
 # Copy package files for the server
 COPY --from=builder /app/pucho-dashboard/package*.json ./
