@@ -314,42 +314,53 @@ app.get(/^\/api\/.*/, (req, res) => {
 function processSyncData(body) {
   setTimeout(() => {
     try {
-      const rawContent = body.data?.content || body.content || [];
-      let allRecords = [];
+      const rawContent = body.data?.content || body.content;
+      if (!rawContent || !Array.isArray(rawContent)) {
+        console.log('Payload content is not an array. Current content:', typeof rawContent);
+        return;
+      }
 
+      let allRecords = [];
       rawContent.forEach(item => {
         if (item['Json Agg']) {
           try {
             const parsed = JSON.parse(item['Json Agg']);
-            if (Array.isArray(parsed)) {
-              allRecords = [...allRecords, ...parsed];
-            }
-          } catch (e) {
-            console.error('Error parsing Json Agg:', e);
-          }
+            if (Array.isArray(parsed)) allRecords = [...allRecords, ...parsed];
+          } catch (e) {}
         }
       });
 
-      if (allRecords.length === 0 && Array.isArray(rawContent)) {
-        allRecords = rawContent;
-      }
+      if (allRecords.length === 0) allRecords = rawContent;
 
       // Robust Stats Calculation
       const safeNumber = (val) => {
-        const parsed = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
+        const parsed = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, ''));
         return isNaN(parsed) ? 0 : parsed;
       };
 
-      const outstandings = allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding');
-      const sales = allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Invoice');
+      // Helper to find record type regardless of key casing ('Record Type', 'record_type', etc.)
+      const getRecordType = (r) => {
+        const type = r.record_type || r['Record Type'] || r.type || '';
+        return type.toLowerCase().trim();
+      };
+
+      const outstandings = allRecords.filter(r => {
+        const type = getRecordType(r);
+        return type.includes('receivable') || type.includes('outstanding');
+      });
+
+      const sales = allRecords.filter(r => {
+        const type = getRecordType(r);
+        return type.includes('sales') || type.includes('order');
+      });
 
       tallyDataStore = {
         ...tallyDataStore,
         receivables: outstandings,
-        payables: allRecords.filter(r => r.record_type === 'Payable' || r.record_type === 'Vendor Payable'),
-        dispatch: allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Dispatch' || r.record_type === 'Invoice'),
-        inventory: allRecords.filter(r => r.record_type === 'Stock' || r.record_type === 'Inventory'),
-        exceptions: allRecords.filter(r => r.record_type === 'Exception' || r.record_type === 'Audit Flag'),
+        payables: allRecords.filter(r => getRecordType(r).includes('payable')),
+        dispatch: sales,
+        inventory: allRecords.filter(r => getRecordType(r).includes('stock') || getRecordType(r).includes('inventory')),
+        exceptions: allRecords.filter(r => getRecordType(r).includes('exception') || getRecordType(r).includes('audit')),
         stats: {
           totalRevenue: `₹${sales.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
           totalOutstanding: `₹${outstandings.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
