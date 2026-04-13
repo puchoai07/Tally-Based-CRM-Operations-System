@@ -294,8 +294,8 @@ app.post('/api/wf1/sync', (req, res) => {
   processSyncData(req.body);
 });
 
-// Informative GET handlers to prevent 404 in browser (Express 5 Syntax)
-app.get('/api/:path*', (req, res) => {
+// Informative GET handlers to prevent 404 in browser (Express 5 Safe Regex)
+app.get(/^\/api\/.*/, (req, res) => {
   res.status(200).send(`
     <div style="font-family: sans-serif; padding: 40px; text-align: center; background: #f8fafc; color: #1e293b; border-radius: 24px; margin: 40px;">
       <h1 style="color: #4f46e5;">🚀 Pucho Bridge Server is Active</h1>
