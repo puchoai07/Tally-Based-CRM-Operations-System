@@ -70,27 +70,27 @@ const AccountsCRM = () => {
         contact: t.contact || '+91 00000 00000',
         invoice: t.task_id || 'AI-TASK'
       })).filter(task => {
-        const matchesSearch = task.customer.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (task.customer || '').toLowerCase().includes((searchTerm || '').toLowerCase());
         const matchesFilter = activeFilter === 'All' || task.status === activeFilter;
         return matchesSearch && matchesFilter;
       });
     }
 
     // Priority 2: Fallback to Raw Receivables Sync (WF-1)
-    const syncTasks = liveData?.receivables?.map(r => ({
+    const syncTasks = (liveData?.receivables || []).map(r => ({
       id: r.id || r.bill_name || Math.random(),
-      customer: r.party_name || r.name,
-      amount: `₹${Number(r.amount || 0).toLocaleString()}`,
+      customer: r.party_name || r.name || 'Unknown Customer',
+      amount: `₹${Number(r.amount || 0).toLocaleString('en-IN')}`,
       numericAmount: r.amount,
       days: r.days || 30,
-      status: Math.abs(r.amount) > 500000 ? "Critical" : "Overdue",
+      status: Math.abs(Number(r.amount || 0)) > 500000 ? "Critical" : "Overdue",
       contact: "+91 00000 00000",
       invoice: r.bill_name || "TALLY-REF"
-    })) || [];
+    }));
 
     return syncTasks.filter(task => {
-      const matchesSearch = task.customer.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           task.invoice.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (task.customer || '').toLowerCase().includes((searchTerm || '').toLowerCase()) || 
+                           (task.invoice || '').toLowerCase().includes((searchTerm || '').toLowerCase());
       const matchesFilter = activeFilter === 'All' || task.status === activeFilter;
       return matchesSearch && matchesFilter;
     });
