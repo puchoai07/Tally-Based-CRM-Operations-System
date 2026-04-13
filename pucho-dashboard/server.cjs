@@ -334,17 +334,26 @@ function processSyncData(body) {
         allRecords = rawContent;
       }
 
+      // Robust Stats Calculation
+      const safeNumber = (val) => {
+        const parsed = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      const outstandings = allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding');
+      const sales = allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Invoice');
+
       tallyDataStore = {
         ...tallyDataStore,
-        receivables: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding'),
+        receivables: outstandings,
         payables: allRecords.filter(r => r.record_type === 'Payable' || r.record_type === 'Vendor Payable'),
         dispatch: allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Dispatch' || r.record_type === 'Invoice'),
         inventory: allRecords.filter(r => r.record_type === 'Stock' || r.record_type === 'Inventory'),
         exceptions: allRecords.filter(r => r.record_type === 'Exception' || r.record_type === 'Audit Flag'),
         stats: {
-          totalRevenue: `₹${allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Invoice').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          totalOutstanding: `₹${allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          pendingInvoices: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').length
+          totalRevenue: `₹${sales.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
+          totalOutstanding: `₹${outstandings.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
+          pendingInvoices: outstandings.length
         },
         lastUpdated: new Date().toISOString()
       };

@@ -181,23 +181,23 @@ const ManagementDashboard = () => {
                    </div>
                 </div>
                 <div className="space-y-4">
-                   {liveData?.receivables?.slice(0, 4).map((debtor, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-all group">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
-                               {debtor.name.charAt(0)}
-                            </div>
-                            <div>
-                               <p className="font-bold text-slate-800">{debtor.name}</p>
-                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Due for 30+ Days</p>
-                            </div>
-                         </div>
-                         <div className="text-right">
-                            <p className="font-black text-slate-800">₹{Number(debtor.amount || 0).toLocaleString()}</p>
-                            <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Critical</span>
-                         </div>
-                      </div>
-                   ))}
+                    {liveData?.receivables?.slice(0, 4).map((debtor, i) => (
+                       <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-all group">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                                {String(debtor?.name || 'U').charAt(0)}
+                             </div>
+                             <div>
+                                <p className="font-bold text-slate-800">{debtor?.name || 'Unknown Debtor'}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Due for 30+ Days</p>
+                             </div>
+                          </div>
+                          <div className="text-right">
+                             <p className="font-black text-slate-800">₹{Number(debtor?.amount || 0).toLocaleString('en-IN')}</p>
+                             <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Critical</span>
+                          </div>
+                       </div>
+                    ))}
                 </div>
             </div>
          </motion.div>
