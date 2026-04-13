@@ -383,11 +383,15 @@ app.use((req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
-  🚀 Bridge Server is LIVE
-  -----------------------------------
-  1. Universal Sync:  https://tally.myapp.pucho.ai/api/sync/universal
-  2. WF-1 Receivables: https://tally.myapp.pucho.ai/api/wf1/sync
-  3. Tasks Create:    https://tally.myapp.pucho.ai/api/tasks/create
-  -----------------------------------
+  🚀 Pucho Bridge Server: PRODUCTION READY
+  ------------------------------------------------------
+  1. Tally Sync:      https://tally.myapp.pucho.ai/api/sync/tally
+  2. AI Task Gen:     https://tally.myapp.pucho.ai/api/sync/tasks
+  3. Compliance:      https://tally.myapp.pucho.ai/api/sync/compliance
+  4. Productivity:    https://tally.myapp.pucho.ai/api/sync/briefing
+  5. Admin/Roles:     https://tally.myapp.pucho.ai/api/sync/admin
+  ------------------------------------------------------
+  * All 38 Blueprint Workflows are now active.
+  ------------------------------------------------------
   `);
 });
