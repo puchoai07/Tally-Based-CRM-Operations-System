@@ -193,7 +193,7 @@ const ManagementDashboard = () => {
                             </div>
                          </div>
                          <div className="text-right">
-                            <p className="font-black text-slate-800">₹{debtor.amount.toLocaleString()}</p>
+                            <p className="font-black text-slate-800">₹{Number(debtor.amount || 0).toLocaleString()}</p>
                             <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Critical</span>
                          </div>
                       </div>

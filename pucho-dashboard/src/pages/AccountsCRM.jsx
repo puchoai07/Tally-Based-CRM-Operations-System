@@ -80,7 +80,7 @@ const AccountsCRM = () => {
     const syncTasks = liveData?.receivables?.map(r => ({
       id: r.id || r.bill_name || Math.random(),
       customer: r.party_name || r.name,
-      amount: `₹${parseFloat(r.amount || 0).toLocaleString()}`,
+      amount: `₹${Number(r.amount || 0).toLocaleString()}`,
       numericAmount: r.amount,
       days: r.days || 30,
       status: Math.abs(r.amount) > 500000 ? "Critical" : "Overdue",
