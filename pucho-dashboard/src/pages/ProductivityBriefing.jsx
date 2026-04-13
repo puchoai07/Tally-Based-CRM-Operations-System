@@ -27,12 +27,16 @@ const ProductivityBriefing = () => {
     const [mode, setMode] = useState('DayStart'); // 'DayStart' or 'DayEnd'
     const [reasons, setReasons] = useState({});
     const [statusUpdates, setStatusUpdates] = useState({});
+    const [lastSync, setLastSync] = useState(null);
 
     const fetchTasks = async () => {
         setLoading(true);
-        const data = await tallyService.getTasks();
+        const data = await tallyService.getDashboardStats();
+        const taskList = data?.tasks || [];
+        if (data?.lastUpdated) setLastSync(data.lastUpdated);
+        
         // Fallback for demo if no tasks exist
-        const finalTasks = data.length > 0 ? data : [
+        const finalTasks = taskList.length > 0 ? taskList : [
             { id: 'T-101', customer: 'Vardhman Ind.', type: 'GSTR Error', detail: 'Missing HSN Code in Invoice #BDG-349', priority: 'High', status: 'Pending' },
             { id: 'T-102', customer: 'Static Ent.', type: 'Follow-up', detail: 'Payment overdue by 12 days (₹1.2L)', priority: 'Medium', status: 'Pending' },
             { id: 'T-103', customer: 'Global Exchange', type: 'Bank Recon', detail: 'Unmatched entry of ₹45,000 from Oct 2', priority: 'Critical', status: 'InProgress' },
@@ -102,7 +106,13 @@ const ProductivityBriefing = () => {
                         <h1 className="text-4xl font-black text-slate-900 tracking-tight">
                             {mode === 'DayStart' ? 'Your Action Plan' : 'Shift Closure Report'}
                         </h1>
-                        <p className="text-slate-500 font-medium">Monitoring Workflows WF-9, 10 & 28</p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-slate-500 font-medium">Monitoring Workflows WF-9, 10 & 28</p>
+                            <div className="h-4 w-[1px] bg-slate-200" />
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> WF-1 Sync: {lastSync ? new Date(lastSync).toLocaleTimeString() : 'Live'}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-4">

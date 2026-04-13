@@ -108,7 +108,14 @@ const AccountsCRM = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Accounts CRM</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Customer Outstanding & Collection Follow-ups</p>
+          <div className="flex items-center gap-2 mt-1">
+             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live WF-1
+             </div>
+             <p className="text-slate-500 text-xs md:text-sm font-medium">
+               {liveData?.lastUpdated ? `Sync: ${new Date(liveData.lastUpdated).toLocaleTimeString()}` : 'Connecting...'}
+             </p>
+          </div>
         </div>
         <div className="flex gap-2 md:gap-3 w-full md:w-auto">
           <button onClick={loadData} className="btn-secondary flex-1 md:flex-none justify-center">
