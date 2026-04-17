@@ -2,15 +2,17 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const DB_FILE = path.join(__dirname, 'tally_db.json');
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
-// In-memory data store
-let tallyDataStore = {
+// Initial state for the data store (Default values)
+const initialStore = {
   receivables: [],
   payables: [],
   dispatch: [],
@@ -18,55 +20,53 @@ let tallyDataStore = {
   exceptions: [],
   tasks: [
     { id: 'COL-101', task_id: 'COL-101', customer: 'Vardhman Industries', detail: 'Payment of ₹1,25,000 overdue by 45 days. High priority follow-up needed.', priority: 'High', task_type: 'Collection Follow-up', status: 'Open', assigned_to: 'Rajesh', ai_reason: 'Assigned to Rajesh because of his high success rate with Vardhman and optimal workload.' },
-    { id: 'DISP-202', task_id: 'DISP-202', customer: 'Global Logistics', detail: 'Prepare 50 units of Lumina for dispatch to Hub A.', priority: 'Medium', task_type: 'Warehouse Dispatch', status: 'Open', assigned_to: 'Amit', ai_reason: 'Routed to Amit at Loading Bay A for Hub A logistics optimization.' },
-    { id: 'AUD-303', task_id: 'AUD-303', customer: 'Tax Audit', detail: 'Mismatch detected in GSTR-2B for Oct 2023. Review needed.', priority: 'Critical', task_type: 'Compliance', status: 'Open', assigned_to: 'Suresh', ai_reason: 'Suresh is the designated Compliance Manager for GST audits.' }
+    { id: 'DISP-202', task_id: 'DISP-202', customer: 'Global Logistics', detail: 'Prepare 50 units of Lumina for dispatch to Hub A.', priority: 'Medium', task_type: 'Warehouse Dispatch', status: 'Open', assigned_to: 'Amit', ai_reason: 'Routed to Amit at Loading Bay A for Hub A logistics optimization.' }
   ],
-  ai_audit_log: [
-    { timestamp: new Date().toISOString(), task_id: 'COL-101', assigned_to: 'Rajesh', reason: 'High success rate with Vardhman + Low workload' },
-    { timestamp: new Date().toISOString(), task_id: 'DISP-202', assigned_to: 'Amit', reason: 'Bay A Optimization' }
-  ],
+  ai_audit_log: [],
   employees: [
     { id: 'emp1', name: 'Rajesh', role: 'Collection Executive', dept: 'Accounts', skills: ['Collection', 'Tally'], workload: 5 },
     { id: 'emp2', name: 'Suresh', role: 'Accounts Manager', dept: 'Accounts', skills: ['Audit', 'GSTR'], workload: 3 },
-    { id: 'emp3', name: 'Amit', role: 'Dispatch Coordinator', dept: 'Logistics', skills: ['Dispatch', 'Inventory'], workload: 8 },
-    { id: 'emp4', name: 'Priya', role: 'Dispatch Coordinator', dept: 'Logistics', skills: ['Dispatch'], workload: 4 },
-    { id: 'emp5', name: 'Vikram', role: 'Purchase Executive', dept: 'Purchase', skills: ['Procurement'], workload: 2 }
+    { id: 'emp3', name: 'Amit', role: 'Dispatch Coordinator', dept: 'Logistics', skills: ['Dispatch', 'Inventory'], workload: 8 }
   ],
   reports: [], 
-  productivity: {
-    score: 65,
-    rank: "Top 5%",
-    onTimeRate: "88%"
-  },
   stats: {
-    totalRevenue: '₹42.5L',
-    totalOutstanding: '₹18.2L',
-    pendingInvoices: 12,
-    agingBuckets: {
-      '0-30': '₹5.2L',
-      '31-60': '₹8.1L',
-      '61-90': '₹3.4L',
-      '90+': '₹1.5L'
-    },
-    collectorPerformance: [
-       { name: 'Rajesh', assigned: 45, completed: 38 },
-       { name: 'Suresh', assigned: 30, completed: 28 },
-       { name: 'Amit', assigned: 55, completed: 42 }
-    ],
-    dispatchPerformance: [
-      { name: 'Loading Bay A', avgDelay: '1.2h', completed: 145 },
-      { name: 'Loading Bay B', avgDelay: '0.8h', completed: 210 },
-      { name: 'Central Hub', avgDelay: '2.5h', completed: 88 }
-    ],
-    collectionHealth: { percentage: 76, target: '₹25L' },
-    dispatchSLA: { percentage: 94.2 },
-    complianceStatus: { daysToDeadline: 8, exceptionCount: 3 },
-    aiAccuracy: { percentage: 98.4 },
-    refillPipeline: { value: '₹12.5L' },
-    vendorObligation: { totalDue: '₹4.2L' }
+    totalRevenue: '₹0',
+    totalOutstanding: '₹0',
+    pendingInvoices: 0,
+    agingBuckets: { '0-30': '₹0', '31-60': '₹0', '61-90': '₹0', '90+': '₹0' },
+    collectionHealth: { percentage: 0, target: '₹0' },
+    dispatchSLA: { percentage: 0 },
+    complianceStatus: { daysToDeadline: 0, exceptionCount: 0 },
+    aiAccuracy: { percentage: 0 },
+    refillPipeline: { value: '₹0' },
+    vendorObligation: { totalDue: '₹0' }
   },
   lastUpdated: new Date().toISOString()
 };
+
+// Persistence Logic: Load and Save to Disk
+function loadDataStore() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const savedData = fs.readFileSync(DB_FILE, 'utf8');
+      return JSON.parse(savedData);
+    }
+  } catch (err) {
+    console.error('Error loading data store from disk:', err);
+  }
+  return initialStore;
+}
+
+function saveDataStore(data) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error saving data store to disk:', err);
+  }
+}
+
+// Initialize the data store from persistent file
+let tallyDataStore = loadDataStore();
 
 // Endpoints are handled below in the master strategy section and aliased at the bottom.
 
@@ -147,6 +147,7 @@ app.post('/api/sync/tasks', (req, res) => {
 
   tallyDataStore.tasks = [...uniqueTasks, ...tallyDataStore.tasks].slice(0, 500);
   tallyDataStore.lastUpdated = new Date().toISOString();
+  saveDataStore(tallyDataStore); // Save to disk
   console.log(`Successfully ingested ${uniqueTasks.length} unique tasks.`);
   res.status(200).json({ status: 'success', message: 'Tasks synchronized successfully' });
 });
@@ -478,6 +479,8 @@ function processSyncData(body) {
           { label: 'Compliance Dept', val: getDeptWorkload('Accounts') > 80 ? 'Heavy' : 'Optimal', color: 'bg-indigo-500', percent: getDeptWorkload('Accounts') }
         ]
       };
+      
+      saveDataStore(tallyDataStore); // Persist synchronized and calculated data to disk
 
       // Trigger AI Task Generation (WF-2, 5, 23, 11)
       runAIGeneration(allRecords);
