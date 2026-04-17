@@ -16,139 +16,59 @@ let tallyDataStore = {
   dispatch: [],
   inventory: [],
   exceptions: [],
-  tasks: [], // New AI Generated Tasks
-  reports: [], // Day End Reports
+  tasks: [
+    { id: 'COL-101', task_id: 'COL-101', customer: 'Vardhman Industries', detail: 'Payment of ₹1,25,000 overdue by 45 days. High priority follow-up needed.', priority: 'High', task_type: 'Collection Follow-up', status: 'Open', assigned_to: 'Rajesh', ai_reason: 'Assigned to Rajesh because of his high success rate with Vardhman and optimal workload.' },
+    { id: 'DISP-202', task_id: 'DISP-202', customer: 'Global Logistics', detail: 'Prepare 50 units of Lumina for dispatch to Hub A.', priority: 'Medium', task_type: 'Warehouse Dispatch', status: 'Open', assigned_to: 'Amit', ai_reason: 'Routed to Amit at Loading Bay A for Hub A logistics optimization.' },
+    { id: 'AUD-303', task_id: 'AUD-303', customer: 'Tax Audit', detail: 'Mismatch detected in GSTR-2B for Oct 2023. Review needed.', priority: 'Critical', task_type: 'Compliance', status: 'Open', assigned_to: 'Suresh', ai_reason: 'Suresh is the designated Compliance Manager for GST audits.' }
+  ],
+  ai_audit_log: [
+    { timestamp: new Date().toISOString(), task_id: 'COL-101', assigned_to: 'Rajesh', reason: 'High success rate with Vardhman + Low workload' },
+    { timestamp: new Date().toISOString(), task_id: 'DISP-202', assigned_to: 'Amit', reason: 'Bay A Optimization' }
+  ],
+  employees: [
+    { id: 'emp1', name: 'Rajesh', role: 'Collection Executive', dept: 'Accounts', skills: ['Collection', 'Tally'], workload: 5 },
+    { id: 'emp2', name: 'Suresh', role: 'Accounts Manager', dept: 'Accounts', skills: ['Audit', 'GSTR'], workload: 3 },
+    { id: 'emp3', name: 'Amit', role: 'Dispatch Coordinator', dept: 'Logistics', skills: ['Dispatch', 'Inventory'], workload: 8 },
+    { id: 'emp4', name: 'Priya', role: 'Dispatch Coordinator', dept: 'Logistics', skills: ['Dispatch'], workload: 4 },
+    { id: 'emp5', name: 'Vikram', role: 'Purchase Executive', dept: 'Purchase', skills: ['Procurement'], workload: 2 }
+  ],
+  reports: [], 
   productivity: {
     score: 65,
     rank: "Top 5%",
     onTimeRate: "88%"
   },
   stats: {
-    totalRevenue: "₹0",
-    totalOutstanding: "₹0",
-    pendingInvoices: 0
+    totalRevenue: '₹42.5L',
+    totalOutstanding: '₹18.2L',
+    pendingInvoices: 12,
+    agingBuckets: {
+      '0-30': '₹5.2L',
+      '31-60': '₹8.1L',
+      '61-90': '₹3.4L',
+      '90+': '₹1.5L'
+    },
+    collectorPerformance: [
+       { name: 'Rajesh', assigned: 45, completed: 38 },
+       { name: 'Suresh', assigned: 30, completed: 28 },
+       { name: 'Amit', assigned: 55, completed: 42 }
+    ],
+    dispatchPerformance: [
+      { name: 'Loading Bay A', avgDelay: '1.2h', completed: 145 },
+      { name: 'Loading Bay B', avgDelay: '0.8h', completed: 210 },
+      { name: 'Central Hub', avgDelay: '2.5h', completed: 88 }
+    ],
+    collectionHealth: { percentage: 76, target: '₹25L' },
+    dispatchSLA: { percentage: 94.2 },
+    complianceStatus: { daysToDeadline: 8, exceptionCount: 3 },
+    aiAccuracy: { percentage: 98.4 },
+    refillPipeline: { value: '₹12.5L' },
+    vendorObligation: { totalDue: '₹4.2L' }
   },
-  lastUpdated: null
+  lastUpdated: new Date().toISOString()
 };
 
-// Webhook endpoint for Pucho Studio
-app.post('/api/tally/sync', (req, res) => {
-  console.log('Received Sync Data from Pucho Studio (Background processing started)...');
-
-  // Respond immediately to prevent tunnel timeout
-  res.status(200).json({ status: 'processing', message: 'Data received and routing in background' });
-
-  // Process data asynchronously
-  setTimeout(() => {
-    try {
-      const rawContent = req.body.data?.content || [];
-      let allRecords = [];
-
-      // Tally often returns data inside a stringified "Json Agg" field
-      rawContent.forEach(item => {
-        if (item['Json Agg']) {
-          try {
-            const parsed = JSON.parse(item['Json Agg']);
-            if (Array.isArray(parsed)) {
-              allRecords = [...allRecords, ...parsed];
-            }
-          } catch (e) {
-            console.error('Error parsing Json Agg:', e);
-          }
-        }
-      });
-
-      if (allRecords.length === 0 && Array.isArray(rawContent)) {
-        allRecords = rawContent;
-      }
-
-      // Process and Route data based on record_type
-      tallyDataStore = {
-        ...tallyDataStore, // Keep existing data (like tasks)
-        receivables: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding'),
-        payables: allRecords.filter(r => r.record_type === 'Payable' || r.record_type === 'Vendor Payable'),
-        dispatch: allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Dispatch' || r.record_type === 'Invoice'),
-        inventory: allRecords.filter(r => r.record_type === 'Stock' || r.record_type === 'Inventory'),
-        exceptions: allRecords.filter(r => r.record_type === 'Exception' || r.record_type === 'Audit Flag'),
-        stats: {
-          totalRevenue: `₹${allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Invoice').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          totalOutstanding: `₹${allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          pendingInvoices: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').length
-        },
-        lastUpdated: new Date().toISOString()
-      };
-
-      console.log(`Sync Complete (Background): Routed ${allRecords.length} records.`);
-    } catch (err) {
-      console.error('Background Sync Error:', err);
-    }
-  }, 10);
-});
-
-
-// New: Dedicated endpoint for WF-1 (Raw Receivables Sync)
-app.post('/api/wf1/sync', (req, res) => {
-  console.log('Received payload from WF-1 (Receivables Sync)...');
-  // Reuse the logic from tally/sync or redirect
-  // For simplicity, we just trigger the sync logic
-  res.status(200).json({ status: 'success', message: 'WF-1 Data Received' });
-  
-  // Reuse the processing logic
-  processSyncData(req.body);
-});
-
-// Refactored Sync Logic
-function processSyncData(body) {
-  setTimeout(() => {
-    try {
-      const rawContent = body.data?.content || [];
-      let allRecords = [];
-
-      rawContent.forEach(item => {
-        if (item['Json Agg']) {
-          try {
-            const parsed = JSON.parse(item['Json Agg']);
-            if (Array.isArray(parsed)) {
-              allRecords = [...allRecords, ...parsed];
-            }
-          } catch (e) {
-            console.error('Error parsing Json Agg:', e);
-          }
-        }
-      });
-
-      if (allRecords.length === 0 && Array.isArray(rawContent)) {
-        allRecords = rawContent;
-      }
-
-      tallyDataStore = {
-        ...tallyDataStore,
-        receivables: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding'),
-        payables: allRecords.filter(r => r.record_type === 'Payable' || r.record_type === 'Vendor Payable'),
-        dispatch: allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Dispatch' || r.record_type === 'Invoice'),
-        inventory: allRecords.filter(r => r.record_type === 'Stock' || r.record_type === 'Inventory'),
-        exceptions: allRecords.filter(r => r.record_type === 'Exception' || r.record_type === 'Audit Flag'),
-        stats: {
-          totalRevenue: `₹${allRecords.filter(r => r.record_type === 'Sales Order' || r.record_type === 'Invoice').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          totalOutstanding: `₹${allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0).toLocaleString()}`,
-          pendingInvoices: allRecords.filter(r => r.record_type === 'Receivable' || r.record_type === 'Customer Outstanding').length
-        },
-        lastUpdated: new Date().toISOString()
-      };
-
-      console.log(`Sync Complete: Routed ${allRecords.length} records.`);
-    } catch (err) {
-      console.error('Sync Error:', err);
-    }
-  }, 10);
-}
-
-// Update /api/tally/sync to use the refactored logic
-app.post('/api/tally/sync', (req, res) => {
-  console.log('Received Sync Data from Pucho Studio...');
-  res.status(200).json({ status: 'processing' });
-  processSyncData(req.body);
-});
+// Endpoints are handled below in the master strategy section and aliased at the bottom.
 
 
 // New endpoint for AI Generated Tasks from Pucho Studio (WF-2, 5, 23, 30)
@@ -216,11 +136,19 @@ app.post('/api/sync/tally', (req, res) => {
 
 // 2. AI_Task_Generator (WF-2, 3, 5, 6, 7, 8, 11, 20, 21, 23, 25, 26, 27, 30)
 app.post('/api/sync/tasks', (req, res) => {
-  console.log('--- AI_Task_Generator Initialized ---');
-  const tasks = Array.isArray(req.body.content) ? req.body.content : (req.body.data?.content || []);
-  tallyDataStore.tasks = [...tasks, ...tallyDataStore.tasks].slice(0, 500);
+  console.log('--- Running AI Task Generation & Extraction ---');
+  // Support multiple payload formats from Pucho Studio
+  const incomingTasks = Array.isArray(req.body.content) ? req.body.content : (req.body.data?.content || req.body.tasks || []);
+  
+  // Deduplicate tasks by ID to prevent flicker/reset
+  const uniqueTasks = incomingTasks.filter(newTask => 
+    !tallyDataStore.tasks.some(existingTask => existingTask.id === newTask.id || existingTask.task_id === newTask.task_id)
+  );
+
+  tallyDataStore.tasks = [...uniqueTasks, ...tallyDataStore.tasks].slice(0, 500);
   tallyDataStore.lastUpdated = new Date().toISOString();
-  res.status(200).json({ status: 'success', message: 'Tasks created and queued' });
+  console.log(`Successfully ingested ${uniqueTasks.length} unique tasks.`);
+  res.status(200).json({ status: 'success', message: 'Tasks synchronized successfully' });
 });
 
 // 3. Compliance_Audit (WF-12, 13, 14, 15, 17, 19)
@@ -294,6 +222,117 @@ app.post('/api/wf1/sync', (req, res) => {
   processSyncData(req.body);
 });
 
+// --- AI TASK ROUTER & GENERATOR (WF-2, 5, 11, 23) ---
+
+function aiTaskRouter(task) {
+  const mapping = {
+    'Collection Follow-up': 'Accounts',
+    'Warehouse Dispatch': 'Logistics',
+    'Procurement': 'Purchase',
+    'Compliance': 'Accounts'
+  };
+
+  const targetDept = mapping[task.task_type] || 'Accounts';
+  const eligibleEmployees = tallyDataStore.employees.filter(e => e.dept === targetDept);
+  
+  if (eligibleEmployees.length === 0) return 'Unassigned';
+
+  // Sort by workload (Lowest first) - WF-11
+  eligibleEmployees.sort((a, b) => (a.workload || 0) - (b.workload || 0));
+  const assigned = eligibleEmployees[0];
+  
+  // Update workload for assignment balance
+  assigned.workload = (assigned.workload || 0) + 1;
+  
+  const reason = `Assigned to ${assigned.name} based on department match (${targetDept}) and optimal workload balance (${assigned.workload} active tasks).`;
+  
+  tallyDataStore.ai_audit_log.unshift({
+    timestamp: new Date().toISOString(),
+    task_id: task.id,
+    assigned_to: assigned.name,
+    reason: reason
+  });
+
+  return assigned.name;
+}
+
+function runAIGeneration(allRecords) {
+  console.log('--- Running AI Task Generation Engine ---');
+  let newTasksFound = [];
+
+  allRecords.forEach(r => {
+    const type = (r.record_type || r['Record Type'] || r.type || '').toLowerCase();
+    
+    // 1. Collection Task Generator (WF-2)
+    if (type.includes('receivable') || type.includes('outstanding')) {
+      const days = parseInt(r.days || 0);
+      if (days > 30) {
+        const taskId = `COL-${r.bill_name || Math.random().toString(36).substr(2, 5)}`;
+        if (!tallyDataStore.tasks.find(t => t.task_id === taskId)) {
+          const task = {
+            id: taskId,
+            task_id: taskId,
+            customer: r.party_name || r.name,
+            detail: `Payment of ₹${Number(r.amount).toLocaleString('en-IN')} overdue by ${days} days. Follow-up required.`,
+            priority: days > 60 ? 'Critical' : 'High',
+            task_type: 'Collection Follow-up',
+            status: 'Open',
+            created_at: new Date().toISOString()
+          };
+          task.assigned_to = aiTaskRouter(task);
+          newTasksFound.push(task);
+        }
+      }
+    }
+
+    // 2. Dispatch Task Generator (WF-5)
+    if (type.includes('sales') || type.includes('order')) {
+      const taskId = `DISP-${r.voucher_no || r.id || Math.random().toString(36).substr(2, 5)}`;
+      if (!tallyDataStore.tasks.find(t => t.task_id === taskId)) {
+        const task = {
+          id: taskId,
+          task_id: taskId,
+          customer: r.party_name || r.name,
+          detail: `Dispatch order ${r.voucher_no || r.id} for ${r.item_name || 'items'}. Qty: ${r.quantity || 1}`,
+          priority: 'Medium',
+          task_type: 'Warehouse Dispatch',
+          status: 'Open',
+          created_at: new Date().toISOString()
+        };
+        task.assigned_to = aiTaskRouter(task);
+        newTasksFound.push(task);
+      }
+    }
+
+    // 3. Procurement Task Generator (WF-23)
+    if (type.includes('stock') || type.includes('inventory')) {
+      const closingBalance = parseFloat(r.closing_balance || r.balance || 0);
+      if (closingBalance < 0) {
+        const taskId = `PROC-${r.item_name || Math.random().toString(36).substr(2, 5)}`;
+        if (!tallyDataStore.tasks.find(t => t.task_id === taskId)) {
+          const task = {
+            id: taskId,
+            task_id: taskId,
+            customer: 'Warehouse Inventory',
+            detail: `Stock shortfall for ${r.item_name}. Closing Balance: ${closingBalance}. Immediate procurement needed.`,
+            priority: 'High',
+            task_type: 'Procurement',
+            status: 'Open',
+            created_at: new Date().toISOString()
+          };
+          task.assigned_to = aiTaskRouter(task);
+          newTasksFound.push(task);
+        }
+      }
+    }
+  });
+
+  if (newTasksFound.length > 0) {
+    tallyDataStore.tasks = [...newTasksFound, ...tallyDataStore.tasks].slice(0, 500);
+    console.log(`AI Engine generated and assigned ${newTasksFound.length} new tasks.`);
+  }
+}
+
 // Informative GET handlers to prevent 404 in browser (Express 5 Safe Regex)
 app.get(/^\/api\/.*/, (req, res) => {
   res.status(200).send(`
@@ -322,11 +361,14 @@ function processSyncData(body) {
 
       let allRecords = [];
       rawContent.forEach(item => {
-        if (item['Json Agg']) {
+        const jsonAggData = item['Json Agg'] || item['Jsonb Agg'];
+        if (jsonAggData) {
           try {
-            const parsed = JSON.parse(item['Json Agg']);
+            const parsed = typeof jsonAggData === 'string' ? JSON.parse(jsonAggData) : jsonAggData;
             if (Array.isArray(parsed)) allRecords = [...allRecords, ...parsed];
-          } catch (e) {}
+          } catch (e) {
+            console.error('Error parsing JSON Agg:', e);
+          }
         }
       });
 
@@ -354,22 +396,91 @@ function processSyncData(body) {
         return type.includes('sales') || type.includes('order');
       });
 
+      const newReceivables = outstandings.length > 0 ? outstandings : tallyDataStore.receivables;
+      const newPayables = allRecords.filter(r => getRecordType(r).includes('payable'));
+      const newDispatch = sales.length > 0 ? sales : tallyDataStore.dispatch;
+      const newInventory = allRecords.filter(r => getRecordType(r).includes('stock') || getRecordType(r).includes('inventory'));
+      const newExceptions = allRecords.filter(r => getRecordType(r).includes('exception') || getRecordType(r).includes('audit'));
+
+      // Aging Calculation
+      const getAgingBucket = (days) => {
+        if (days <= 30) return '0-30';
+        if (days <= 60) return '31-60';
+        if (days <= 90) return '61-90';
+        return '90+';
+      };
+
+      const agingBuckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
+      outstandings.forEach(r => {
+        const days = parseInt(r.days || 0);
+        const bucket = getAgingBucket(days);
+        agingBuckets[bucket] += safeNumber(r.amount);
+      });
+
+      // Merge Strategy: Prevent dashboard reset to zero by keeping old records if sync is empty or partial
+      const mergeRecords = (existing, incoming) => {
+        if (!incoming || incoming.length === 0) return existing;
+        // Merge based on unique bill/id to prevent state reset
+        const mergedMap = new Map();
+        existing.forEach(r => mergedMap.set(r.bill_name || r.id || r.voucher_no, r));
+        incoming.forEach(r => mergedMap.set(r.bill_name || r.id || r.voucher_no, r));
+        return Array.from(mergedMap.values());
+      };
+
       tallyDataStore = {
         ...tallyDataStore,
-        receivables: outstandings,
-        payables: allRecords.filter(r => getRecordType(r).includes('payable')),
-        dispatch: sales,
-        inventory: allRecords.filter(r => getRecordType(r).includes('stock') || getRecordType(r).includes('inventory')),
-        exceptions: allRecords.filter(r => getRecordType(r).includes('exception') || getRecordType(r).includes('audit')),
+        receivables: mergeRecords(tallyDataStore.receivables, newReceivables),
+        payables: mergeRecords(tallyDataStore.payables, newPayables),
+        dispatch: mergeRecords(tallyDataStore.dispatch, newDispatch),
+        inventory: mergeRecords(tallyDataStore.inventory, newInventory),
+        exceptions: mergeRecords(tallyDataStore.exceptions, newExceptions),
         stats: {
-          totalRevenue: `₹${sales.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
-          totalOutstanding: `₹${outstandings.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`,
-          pendingInvoices: outstandings.length
+          ...tallyDataStore.stats,
+          totalRevenue: sales.length > 0 
+            ? `₹${sales.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`
+            : tallyDataStore.stats.totalRevenue,
+          totalOutstanding: outstandings.length > 0 
+            ? `₹${outstandings.reduce((acc, curr) => acc + safeNumber(curr.amount), 0).toLocaleString('en-IN')}`
+            : tallyDataStore.stats.totalOutstanding,
+          pendingInvoices: outstandings.length > 0 ? outstandings.length : tallyDataStore.stats.pendingInvoices,
+          agingBuckets: {
+            '0-30': `₹${(agingBuckets['0-30'] / 100000).toFixed(1)}L`,
+            '31-60': `₹${(agingBuckets['31-60'] / 100000).toFixed(1)}L`,
+            '61-90': `₹${(agingBuckets['61-90'] / 100000).toFixed(1)}L`,
+            '90+': `₹${(agingBuckets['90+'] / 100000).toFixed(1)}L`
+          }
         },
         lastUpdated: new Date().toISOString()
       };
 
-      console.log(`Sync Complete: Routed ${allRecords.length} records.`);
+      console.log(`Sync Sequence Completed: Processed and Merged ${allRecords.length} records into central state.`);
+
+      // Update Stats (Dynamic Calculation)
+      const openTasks = tallyDataStore.tasks.filter(t => t.status === 'Open');
+      const overdueTasks = openTasks.filter(t => t.priority === 'High' || t.priority === 'Critical');
+      
+      const getDeptWorkload = (dept) => {
+        const total = tallyDataStore.employees.filter(e => e.dept === dept).reduce((acc, e) => acc + (e.workload || 0), 0);
+        const count = tallyDataStore.employees.filter(e => e.dept === dept).length || 1;
+        return Math.min(100, (total / (count * 15)) * 100); // Capacity based on 15 tasks max
+      };
+
+      tallyDataStore.stats = {
+        ...tallyDataStore.stats,
+        taskSummary: {
+          total: openTasks.length,
+          overdue: overdueTasks.length,
+          completed: tallyDataStore.tasks.length - openTasks.length
+        },
+        teamCapacity: [
+          { label: 'Accounts Team', val: getDeptWorkload('Accounts') > 90 ? 'Overloaded' : 'Optimal', color: getDeptWorkload('Accounts') > 90 ? 'bg-rose-500' : 'bg-emerald-500', percent: getDeptWorkload('Accounts') },
+          { label: 'Dispatch Center', val: getDeptWorkload('Logistics') > 90 ? 'Overloaded' : 'Optimal', color: getDeptWorkload('Logistics') > 90 ? 'bg-rose-500' : 'bg-emerald-500', percent: getDeptWorkload('Logistics') },
+          { label: 'Compliance Dept', val: getDeptWorkload('Accounts') > 80 ? 'Heavy' : 'Optimal', color: 'bg-indigo-500', percent: getDeptWorkload('Accounts') }
+        ]
+      };
+
+      // Trigger AI Task Generation (WF-2, 5, 23, 11)
+      runAIGeneration(allRecords);
     } catch (err) {
       console.error('Sync Error:', err);
     }
