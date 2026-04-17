@@ -401,7 +401,10 @@ function processSyncData(body) {
       const newPayables = allRecords.filter(r => getRecordType(r).includes('payable'));
       const newDispatch = sales.length > 0 ? sales : tallyDataStore.dispatch;
       const newInventory = allRecords.filter(r => getRecordType(r).includes('stock') || getRecordType(r).includes('inventory'));
-      const newExceptions = allRecords.filter(r => getRecordType(r).includes('exception') || getRecordType(r).includes('audit'));
+      const newExceptions = allRecords.filter(r => {
+        const type = getRecordType(r);
+        return type.includes('exception') || type.includes('audit') || (r['Audit Status'] && r['Audit Status'] !== 'null' && r['Audit Status'] !== '');
+      });
 
       // Aging Calculation
       const getAgingBucket = (days) => {
